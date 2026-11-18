@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Demo: consultas de WhatsApp fuera de horario (ficticio)</title>
+<style>
+:root {
+  --bg: #F5F1E8;
+  --ink: #33302C;
+  --accent: #3B7D86;
+  --sand: #E8E1D2;
+  --accent-light: #CFE3E5;
+  --muted: #5E5A52;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #2A2824; --ink: #F5F1E8; --accent: #5FA3AC; --sand: #3D3932;
+    --accent-light: #2F4F53; --muted: #A8A399;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #2A2824; --ink: #F5F1E8; --accent: #5FA3AC; --sand: #3D3932;
+  --accent-light: #2F4F53; --muted: #A8A399;
+}
+*, *::before, *::after { box-sizing: border-box; }
+html, body { min-height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Inter, "Helvetica Neue", Arial, sans-serif;
+  font-size: 17px;
+  line-height: 1.4;
+}
+.stage {
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+}
+.note {
+  width: 100%;
+  font-size: 14px;
+  background: var(--sand);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.phone {
+  width: 380px;
+  height: 740px;
+  max-width: 100%;
+  border: 10px solid #1F1F1F;
+  border-radius: 42px;
+  overflow: hidden;
+  box-shadow: 0 12px 30px rgba(0,0,0,.25);
+  background: #EFEAE2;
+}
+.screen { height: 100%; display: flex; flex-direction: column; }
+@media (max-width: 500px) {
+  .phone { width: 100%; height: calc(100vh - 80px); border: 0; border-radius: 0; box-shadow: none; }
+}
+.wa-head {
+  background: #008069;
+  color: #FFFFFF;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  flex-shrink: 0;
+}
+.back { font-size: 20px; width: 14px; }
+.avatar {
+  width: 38px; height: 38px; border-radius: 50%;
+  background: #CFE3E5; color: #33302C;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 500; font-size: 17px;
+}
+.who { display: flex; flex-direction: column; }
+.name { font-size: 16px; font-weight: 500; }
+.status { font-size: 12.5px; opacity: .85; }
+.chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.row { display: flex; }
+.row.in { justify-content: flex-start; }
+.row.out { justify-content: flex-end; }
+.bubble {
+  position: relative;
+  max-width: 80%;
+  padding: 6px 8px 5px 9px;
+  border-radius: 8px;
+  font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  color: #111B21;
+  white-space: pre-line;
+  box-shadow: 0 1px 0.5px rgba(11,20,26,.13);
+}
+.in .bubble { background: #FFFFFF; border-top-left-radius: 0; }
+.out .bubble { background: #D9FDD3; border-top-right-radius: 0; }
+.meta {
+  float: right;
+  margin: 6px 0 -3px 10px;
+  font-size: 11px;
+  color: #667781;
+  display: flex;
+  gap: 3px;
+  align-items: center;
+}
+.ticks { color: #8696A0; font-size: 12px; letter-spacing: -2px; }
+.ticks.read { color: #53BDEB; }
+.sys {
+  align-self: center;
+  background: #FFEECD;
+  color: #54656F;
+  font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 12.5px;
+  padding: 5px 10px;
+  border-radius: 8px;
+  margin: 6px 0;
+  text-align: center;
+  box-shadow: 0 1px 0.5px rgba(11,20,26,.13);
+}
+.chips {
+  background: #F0F2F5;
+  padding: 8px 10px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-height: 8px;
+  flex-shrink: 0;
+}
+button.chip {
+  font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 15px;
+  color: #008069;
+  background: #FFFFFF;
+  border: 0;
+  border-radius: 8px;
+  padding: 10px 12px;
+  text-align: left;
+  cursor: pointer;
+  box-shadow: 0 1px 0.5px rgba(11,20,26,.13);
+}
+button.chip:focus-visible { outline: 2px solid #008069; outline-offset: 2px; }
+.inputbar {
+  background: #F0F2F5;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px 12px;
+  flex-shrink: 0;
+}
+.field {
+  flex: 1;
+  background: #FFFFFF;
+  border-radius: 22px;
+  padding: 9px 14px;
+  color: #8696A0;
+  font-family: "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 15px;
+}
+.mic {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: #00A884;
+  flex-shrink: 0;
+}
+.foot { width: 100%; font-size: 14px; color: var(--muted); display: flex; justify-content: space-between; align-items: center; }
+button.reset {
+  font: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  background: transparent;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  padding: 6px 12px;
+  cursor: pointer;
+}
+button.reset:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="note"><strong>Ejemplo ficticio.</strong> La cabaña, las fechas, el precio y la conversación son inventados. En la versión real, la disponibilidad sale del calendario del alojamiento.</div>
+
+  <div class="phone">
+    <div class="screen">
+      <header class="wa-head">
+        <span class="back">←</span>
+        <div class="avatar">C</div>
+        <div class="who">
+          <div class="name">Cabaña del Bosque</div>
+          <div class="status" id="status">en línea</div>
+        </div>
+      </header>
+      <div class="chat" id="chat" aria-live="polite"></div>
+      <div class="chips" id="taps"></div>
+      <div class="inputbar">
+        <div class="field">Mensaje</div>
+        <div class="mic" aria-hidden="true"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="foot">
+    <span>Dos toques y listo.</span>
+    <button class="reset" id="reset" type="button">Reiniciar</button>
+  </div>
+</div>
+
+<script>
+const flow = [
+  {
+    tap: "¿Tienen lugar para el finde largo?",
+    guest: "¿Tienen lugar para el finde largo?",
+    bot: "Buenas noches, gracias por escribirnos. Para revisar la disponibilidad, ¿me indicás la fecha de entrada, la de salida y cuántas personas serían?"
+  },
+  {
+    tap: "Del 5 al 7, somos 4.",
+    guest: "Del 5 al 7, somos 4.",
+    bot: "Gracias. Registré tu consulta: entrada el 5, salida el 7, 4 personas. Tenemos disponibilidad, el precio sería de $150.000 por noche (precio ficticio). Confirmamos la reserva.",
+    card: "Consulta derivada al equipo · entrada 5 · salida 7 · 4 personas"
+  },
+  {
+    tap: "Sí.",
+    guest: "Sí.",
+    bot: "Perfecto. En un momento el equipo se encarga de cobrarte la seña. ¡Gracias!"
+  }
+];
+
+const chat = document.getElementById("chat");
+const taps = document.getElementById("taps");
+const status = document.getElementById("status");
+const resetBtn = document.getElementById("reset");
+let step = 0;
+let timer = null;
+
+function scrollDown() { chat.scrollTop = chat.scrollHeight; }
+
+function bubble(side, text) {
+  const row = document.createElement("div");
+  row.className = "row " + side;
+  const b = document.createElement("div");
+  b.className = "bubble";
+  b.textContent = text;
+  const meta = document.createElement("span");
+  meta.className = "meta";
+  const time = document.createElement("span");
+  time.textContent = "02:47";
+  meta.appendChild(time);
+  if (side === "out") {
+    const ticks = document.createElement("span");
+    ticks.className = "ticks";
+    ticks.textContent = "✓✓";
+    meta.appendChild(ticks);
+  }
+  b.appendChild(meta);
+  row.appendChild(b);
+  chat.appendChild(row);
+  scrollDown();
+  return row;
+}
+
+function sys(text) {
+  const d = document.createElement("div");
+  d.className = "sys";
+  d.textContent = text;
+  chat.appendChild(d);
+  scrollDown();
+}
+
+function renderChips() {
+  taps.innerHTML = "";
+  if (step < flow.length) {
+    const c = document.createElement("button");
+    c.className = "chip";
+    c.type = "button";
+    c.textContent = flow[step].tap;
+    c.addEventListener("click", () => runStep(step));
+    taps.appendChild(c);
+  }
+}
+
+function runStep(i) {
+  taps.innerHTML = "";
+  const guestRow = bubble("out", flow[i].guest);
+  status.textContent = "escribiendo…";
+  timer = setTimeout(() => {
+    guestRow.querySelector(".ticks").classList.add("read");
+    status.textContent = "en línea";
+    bubble("in", flow[i].bot);
+    if (flow[i].card) sys(flow[i].card);
+    step = i + 1;
+    renderChips();
+  }, 1100);
+}
+
+function reset() {
+  clearTimeout(timer);
+  step = 0;
+  status.textContent = "en línea";
+  chat.innerHTML = "";
+  sys("Hoy");
+  renderChips();
+}
+
+resetBtn.addEventListener("click", reset);
+reset();
+</script>
+</body>
+</html>
